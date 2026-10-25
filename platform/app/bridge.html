@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>bridge</title></head>
+<body>bridge ready<script>
+// 下载桥：同源于平台服务器，接收 wvpn 页面的 postMessage 指令
+let id0 = 0;
+window.addEventListener("message", async (ev) => {
+  const m = ev.data || {};
+  const id = m.id;
+  const reply = (res) => { try { ev.source.postMessage({ id, res }, "*"); } catch (e) {} };
+  try {
+    if (m.cmd === "ping") return reply({ ok: true, t: Date.now() });
+    if (m.cmd === "next") {
+      const j = await (await fetch("/api/dlqueue", { method: "POST" })).json();
+      return reply(j);
+    }
+    if (m.cmd === "uchunk") {
+      // 分片上传
+      window.__acc = window.__acc || {};
+      const acc = window.__acc[m.uid] = window.__acc[m.uid] || { chunks: [], total: m.total, path: m.path, num: m.num };
+      acc.chunks[m.seq] = m.b64;
+      if (m.seq + 1 === m.total) {
+        const b64 = acc.chunks.join("");
+        delete window.__acc[m.uid];
+        const up = await (await fetch("/api/upload_pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: acc.path, b64, num: acc.num }) })).json();
+        await fetch("/api/dlmark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ num: acc.num, status: up.ok ? "ok" : "upload-fail" }) });
+        return reply({ ok: !!up.ok, size: up.size, linked: up.linked, err: up.error });
+      }
+      return reply({ ack: m.seq });
+    }
+    if (m.cmd === "mark") {
+      await fetch("/api/dlmark", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(m.body) });
+      return reply({ ok: true });
+    }
+    reply({ err: "unknown cmd" });
+  } catch (e) { reply({ err: String(e).slice(0, 100) }); }
+});
+</script></body></html>

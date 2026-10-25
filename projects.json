@@ -1,0 +1,12 @@
+{
+ "active": "p_lrm",
+ "projects": [
+  {
+   "id": "p_lrm",
+   "name": "示例：钠离子电池正极综述",
+   "type": "综述",
+   "created": "2026-10-25",
+   "legacy": true
+  }
+ ]
+}

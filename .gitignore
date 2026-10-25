@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+config.json
+platform/data/meta.json
+translator/data/
+论文项目/
+06_导出/*
+!06_导出/.gitkeep
+05_成稿/*
+!05_成稿/.gitkeep
+*.sqlite.bak*
+.DS_Store
+Thumbs.db

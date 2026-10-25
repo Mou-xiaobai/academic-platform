@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学术研究平台</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="logo">🎓 学术研究平台<br><span style="font-size:11px;font-weight:400;color:#8a93a6">文献 · 综述 · 翻译 · Zotero</span></div>
+    <nav id="nav">
+      <button data-view="dash" class="active">📊 总览看板</button>
+      <button data-view="outline">🗂 大纲工作台</button>
+      <button data-view="write">✍️ 章节写作</button>
+      <button data-view="lit">📚 文献库</button>
+      <button data-view="fig">🖼 图表规划</button>
+      <button data-view="translate">🌐 论文翻译</button>
+      <button data-view="analysis">🔍 原文拆解</button>
+      <button data-view="dl">📥 下载台账</button>
+      <button data-view="export">📤 导出</button>
+    </nav>
+    <div class="side-foot">
+      <div id="save-state">就绪</div>
+    </div>
+  </aside>
+  <main id="main">
+    <div id="ptabs"></div>
+    <div id="mcontent"></div>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+<div id="modal-bg"><div id="modal"></div></div>
+</body>
+</html>

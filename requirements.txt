@@ -1,0 +1,6 @@
+# 平台本体零依赖（纯标准库）。以下为可选增强：
+PyMuPDF>=1.24        # PDF阅读器/元数据提取/AI拆解/文献工具（推荐）
+python-docx>=1.1     # Word导出直出 .docx（可选，缺失时用HTML转存）
+fastapi>=0.110       # 论文翻译服务（可选，见 translator/）
+uvicorn>=0.29
+python-multipart>=0.0.9

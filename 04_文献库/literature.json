@@ -1,0 +1,32 @@
+[
+ {
+  "id": "demo1",
+  "orig_num": 1,
+  "authors": "Manthiram, A.",
+  "year": 2020,
+  "title": "A reflection on lithium-ion battery cathode chemistry",
+  "journal": "Nature Communications",
+  "doi": "10.1038/s41467-020-15355-0",
+  "chapter": "ch1",
+  "folder": "01_核心文献",
+  "source": "示例数据",
+  "verified": true,
+  "pdf_path": "",
+  "note": "示例条目：AI拆解的对标论文"
+ },
+ {
+  "id": "demo2",
+  "orig_num": 2,
+  "authors": "示例作者, et al.",
+  "year": 2024,
+  "title": "示例条目：手动添加或批量导入后出现在这里",
+  "journal": "示例期刊",
+  "doi": "",
+  "chapter": "ch2",
+  "folder": "02_方法与基础",
+  "source": "示例数据",
+  "verified": false,
+  "pdf_path": "",
+  "note": ""
+ }
+]
