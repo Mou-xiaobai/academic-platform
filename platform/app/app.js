@@ -634,25 +634,151 @@ window.editLit = function (i) {
     });
 };
 
-/* ---------------- 图表规划 ---------------- */
-function renderFig(m) {
-  m.innerHTML = `<h1>🖼 图表规划 <button class="btn sec" onclick="editFig(null)">＋ 新增</button></h1>
-  <div class="grid c2">${DATA.figures.map((f, i) => `
-    <div class="card"><b>${esc(f.id)} · ${esc(f.title)}</b> <span class="tag">${esc(f.chapter)}</span>
-    <p class="small" style="margin-top:8px">${esc(f.desc)}</p>
-    <p class="small" style="margin-top:6px;color:#667">素材：${esc(f.source)}</p>
-    <div style="margin-top:8px"><button class="btn sec mini" onclick="editFig(${i})">编辑</button> <button class="btn warn mini" onclick="delFig(${i})">删</button></div></div>`).join("") || "暂无规划"}</div>`;
+/* ---------------- 图表规划（轴定义+图示样例） ---------------- */
+const FIG_KINDS = [["schematic", "示意图"], ["line", "折线/曲线"], ["bar", "柱状图"], ["scatter", "散点图"],
+["heatmap", "热图/相图"], ["timeline", "时间轴"], ["table", "表格/矩阵"]];
+const FIG_COLORS = ["#1a5fb4", "#2ec27e", "#e01b24", "#f5a623", "#7c3aed", "#0aa2a8"];
+
+function figAxis(f, ax) {
+  const a = f[ax] || {};
+  return [a.label || "", a.unit || "", a.range || ""];
 }
+function escX(s) { return esc(s).replace(/'/g, "&#39;"); }
+
+function figSketch(f) {
+  const kind = f.kind || (f.id.startsWith("表") ? "table" : "schematic");
+  const W = 360, H = 210, L = 52, R = 12, T = 18, B = 44;
+  const series = f.series || [];
+  const [xl, xu, xr] = figAxis(f, "x"), [yl, yu, yr] = figAxis(f, "y");
+  const xText = xl + (xu ? ` (${xu})` : ""), yText = yl + (yu ? ` (${yu})` : "");
+  const axis = `<line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="#555" marker-end="url(#arr)"/>
+    <line x1="${L}" y1="${H - B}" x2="${L}" y2="${T}" stroke="#555" marker-end="url(#arr)"/>
+    <text x="${(L + W - R) / 2}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#444">${escX(xText)}</text>
+    <text x="14" y="${(T + H - B) / 2}" font-size="11" fill="#444" transform="rotate(-90 14 ${(T + H - B) / 2})" text-anchor="middle">${escX(yText)}</text>
+    <text x="${W - R}" y="${H - B + 14}" font-size="9" fill="#888" text-anchor="end">${escX(xr)}</text>
+    <text x="${L - 6}" y="${T + 6}" font-size="9" fill="#888" text-anchor="end">${escX(yr)}</text>`;
+  let body = "";
+  if (kind === "line") {
+    const paths = [
+      "M60,150 C110,90 180,120 220,60 S300,80 340,55",
+      "M60,165 C120,150 190,160 250,130 S320,120 340,112",
+      "M60,170 C130,168 200,150 260,140 S320,130 340,126"];
+    body = paths.slice(0, Math.max(1, Math.min(3, series.length || 3))).map((d, i) =>
+      `<path d="${d}" fill="none" stroke="${FIG_COLORS[i]}" stroke-width="2.2" stroke-dasharray="${i === 2 ? "6 3" : ""}"/>`).join("");
+  } else if (kind === "bar") {
+    body = [0, 1, 2, 3].map(g => [0, 1].map(s => {
+      const y0 = 60 + ((g * 31 + s * 47) % 90);
+      return `<rect x="${70 + g * 70 + s * 22}" y="${y0}" width="18" height="${(H - B) - y0}" fill="${FIG_COLORS[s]}" opacity=".85"/>`;
+    }).join("")).join("");
+  } else if (kind === "scatter") {
+    body = series.slice(0, 3).map((_, s) => [0, 1, 2, 3, 4].map(j =>
+      `<circle cx="${70 + ((s * 53 + j * 41) % 250)}" cy="${55 + ((s * 29 + j * 61) % 115)}" r="3.6" fill="${FIG_COLORS[s]}" opacity=".8"/>`).join("")).join("");
+  } else if (kind === "heatmap") {
+    body = [0, 1, 2, 3, 4].map(r => [0, 1, 2, 3, 4].map(c =>
+      `<rect x="${L + 4 + c * 38}" y="${T + 6 + r * 28}" width="34" height="24" rx="3" fill="#7c3aed" opacity="${(0.15 + ((r * 6 + c * 3) % 10) / 11).toFixed(2)}"/>`).join("")).join("");
+  } else if (kind === "timeline") {
+    body = `<line x1="40" y1="105" x2="330" y2="105" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>` +
+      series.slice(0, 5).map((s, i) => {
+        const x = 55 + i * Math.min(72, 270 / Math.max(1, Math.min(5, series.length) - 0.001));
+        const up = i % 2 === 0;
+        return `<circle cx="${x}" cy="105" r="5" fill="${FIG_COLORS[i % 6]}"/>
+        <line x1="${x}" y1="105" x2="${x}" y2="${up ? 78 : 132}" stroke="#999"/>
+        <text x="${x}" y="${up ? 70 : 148}" text-anchor="middle" font-size="9.5" fill="#333">${escX(String(s).slice(0, 16))}</text>`;
+      }).join("");
+  } else if (kind === "table") {
+    const cols = series.slice(0, 6), rows = (f.rows || []).slice(0, 5);
+    const cw = Math.floor(300 / Math.max(1, cols.length + 1)), rh = 26;
+    body = cols.map((c, i) =>
+      `<text x="${L + cw * (i + 1) + cw / 2}" y="${T + 16}" text-anchor="middle" font-size="8.5" fill="#1a5fb4">${escX(String(c).slice(0, 6))}</text>`).join("") +
+      rows.map((r, ri) => {
+        const y0 = T + 26 + ri * rh;
+        return `<text x="${L + 4}" y="${y0 + 15}" font-size="9" fill="#333">${escX(String(r).slice(0, 8))}</text>` +
+          cols.map((_, ci) => {
+            const mark = (ri + ci) % 3 === 0 ? "●" : (ri + ci) % 3 === 1 ? "○" : "—";
+            return `<text x="${L + cw * (ci + 1) + cw / 2}" y="${y0 + 15}" text-anchor="middle" font-size="10" fill="${mark === "●" ? "#2ec27e" : mark === "○" ? "#f5a623" : "#bbb"}">${mark}</text>`;
+          }).join("");
+      }).join("") +
+      cols.map((_, i) => `<line x1="${L + cw * (i + 1)}" y1="${T + 4}" x2="${L + cw * (i + 1)}" y2="${T + 26 + rows.length * rh}" stroke="#e3e5ec"/>`).join("") +
+      `<line x1="${L}" y1="${T + 20}" x2="${W - R}" y2="${T + 20}" stroke="#1a5fb4" stroke-width="1.4"/>
+       <line x1="${L}" y1="${T + 26 + rows.length * rh}" x2="${W - R}" y2="${T + 26 + rows.length * rh}" stroke="#e3e5ec"/>`;
+  } else { // schematic：模块框 + 箭头
+    const mods = series.slice(0, 6);
+    body = mods.map((m, i) => {
+      const col = i % 3, row = Math.floor(i / 3);
+      const x0 = 46 + col * 96, y0 = 40 + row * 74;
+      return `<rect x="${x0}" y="${y0}" width="86" height="52" rx="9" fill="${FIG_COLORS[i % 6]}" opacity=".13" stroke="${FIG_COLORS[i % 6]}" stroke-width="1.4"/>
+      <text x="${x0 + 43}" y="${y0 + 24}" text-anchor="middle" font-size="9.5" fill="#333">${escX(String(m).slice(0, 10))}</text>
+      <text x="${x0 + 43}" y="${y0 + 40}" text-anchor="middle" font-size="8" fill="#888">${escX(["模块a", "模块b", "模块c", "模块d", "模块e", "模块f"][i] || "")}</text>`;
+    }).join("") +
+      mods.slice(1, 6).map((_, i) => {
+        const x0 = 132 + (i % 3) * 96, y0 = 66 + Math.floor(i / 3) * 74;
+        return `<path d="M${x0 - 4},${y0 - 12} q10,-8 20,0" fill="none" stroke="#999" marker-end="url(#arr)"/>`;
+      }).join("");
+  }
+  const legendPos = { line: [L + 10, T + 2], bar: [L + 10, T + 2], scatter: [L + 10, T + 2], heatmap: [L + 4 + 5 * 38 + 10, T + 2] }[kind];
+  const legend = legendPos
+    ? series.slice(0, 4).map((s, i) =>
+      `<g transform="translate(${legendPos[0]},${legendPos[1] + i * 15})"><rect width="10" height="10" rx="2" fill="${FIG_COLORS[i % 6]}"/><text x="14" y="9" font-size="9" fill="#444">${escX(String(s).slice(0, 12))}</text></g>`).join("")
+    : "";
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;background:#fff;border:1px solid #e3e5ec;border-radius:8px">
+    <defs><marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#555"/></marker></defs>
+    ${kind === "timeline" || kind === "table" || kind === "schematic" ? "" : axis}${body}${legend}</svg>`;
+}
+
+function renderFig(m) {
+  m.innerHTML = `<h1>🖼 图表规划 <span class="small">— ${esc(DATA.pname || "")}</span>
+  <button class="btn sec" onclick="editFig(null)">＋ 新增图表</button>
+  <span class="small">每张图给出 类型/横纵轴/图例 的确切定义，并自动生成图示样例草图；正式图仍需自绘。</span></h1>
+  <div class="grid c2">${DATA.figures.map((f, i) => {
+    const [xl, xu, xr] = figAxis(f, "x"), [yl, yu, yr] = figAxis(f, "y");
+    const kindName = (FIG_KINDS.find(k => k[0] === (f.kind || (f.id.startsWith("表") ? "table" : "schematic"))) || ["", "?"])[1];
+    return `<div class="card">
+    <b>${esc(f.id)} · ${esc(f.title)}</b> <span class="tag">${esc(f.chapter)}</span> <span class="tag o">${kindName}</span>
+    <div style="margin:10px 0 8px">${figSketch(f)}</div>
+    <div class="small" style="margin:4px 0">
+      ${(xl || yl) ? `<span class="tag">X：${esc(xl)}${xu ? " (" + esc(xu) + ")" : ""}${xr ? " [" + esc(xr) + "]" : ""}</span>
+      <span class="tag">Y：${esc(yl)}${yu ? " (" + esc(yu) + ")" : ""}${yr ? " [" + esc(yr) + "]" : ""}</span>` : ""}
+      ${(f.series || []).map(s => `<span class="tag g">${esc(s)}</span>`).join("")}
+    </div>
+    ${f.panel ? `<p class="small" style="margin:6px 0 0"><b>布局：</b>${esc(f.panel)}</p>` : ""}
+    <p class="small" style="margin:6px 0 0">${esc(f.desc)}</p>
+    <p class="small" style="margin:4px 0 8px;color:#667">素材：${esc(f.source)}</p>
+    <button class="btn sec mini" onclick="editFig(${i})">编辑</button>
+    <button class="btn warn mini" onclick="delFig(${i})">删</button></div>`;
+  }).join("") || "暂无规划"}</div>`;
+}
+
 window.editFig = function (i) {
-  const f = i === null ? { id: "图1", title: "", chapter: CH_ORDER[0] || "ch1", desc: "", source: "" } : DATA.figures[i];
+  const base = i === null
+    ? { id: "图" + (DATA.figures.filter(x => !x.id.startsWith("表")).length + 1), title: "", chapter: CH_ORDER[0] || "ch1", desc: "", source: "", kind: "line", x: { label: "", unit: "", range: "" }, y: { label: "", unit: "", range: "" }, series: [], rows: [], panel: "" }
+    : JSON.parse(JSON.stringify(DATA.figures[i]));
   modal(i === null ? "新增图表规划" : "编辑图表规划", `
-    <div style="display:flex;gap:12px"><div style="flex:1"><label>编号</label><input id="f-id" value="${esc(f.id)}"></div>
-    <div style="flex:1"><label>章节</label><select id="f-c">${CH_ORDER.map(c => `<option ${f.chapter === c ? "selected" : ""}>${c}</option>`).join("")}</select></div></div>
-    <label>主题</label><input id="f-t" value="${esc(f.title)}">
-    <label>内容要素</label><textarea id="f-d" rows="4">${esc(f.desc)}</textarea>
-    <label>素材来源建议</label><input id="f-s" value="${esc(f.source)}">`,
+    <div style="display:flex;gap:12px"><div style="flex:1"><label>编号</label><input id="f-id" value="${esc(base.id)}"></div>
+    <div style="flex:1"><label>章节</label><select id="f-c">${CH_ORDER.map(c => `<option ${base.chapter === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+    <div style="flex:1"><label>类型</label><select id="f-kind">${FIG_KINDS.map(k => `<option value="${k[0]}" ${(base.kind || "") === k[0] ? "selected" : ""}>${k[1]}</option>`).join("")}</select></div></div>
+    <label>主题</label><input id="f-t" value="${esc(base.title)}">
+    <div style="display:flex;gap:12px">
+      <div style="flex:2"><label>X 轴标签（表格=列说明可留空）</label><input id="f-xl" value="${esc((base.x || {}).label || "")}"></div>
+      <div style="flex:1"><label>单位</label><input id="f-xu" value="${esc((base.x || {}).unit || "")}"></div>
+      <div style="flex:1"><label>范围/刻度</label><input id="f-xr" value="${esc((base.x || {}).range || "")}"></div></div>
+    <div style="display:flex;gap:12px">
+      <div style="flex:2"><label>Y 轴标签</label><input id="f-yl" value="${esc((base.y || {}).label || "")}"></div>
+      <div style="flex:1"><label>单位</label><input id="f-yu" value="${esc((base.y || {}).unit || "")}"></div>
+      <div style="flex:1"><label>范围/刻度</label><input id="f-yr" value="${esc((base.y || {}).range || "")}"></div></div>
+    <label>系列/图例（示意图=模块名；表格=列头。每行一个）</label><textarea id="f-series" rows="4">${esc((base.series || []).join("\n"))}</textarea>
+    <label>行头（仅表格/矩阵，每行一个）</label><textarea id="f-rows" rows="3">${esc((base.rows || []).join("\n"))}</textarea>
+    <label>布局/面板说明</label><input id="f-panel" value="${esc(base.panel || "")}">
+    <label>内容要素</label><textarea id="f-d" rows="3">${esc(base.desc)}</textarea>
+    <label>素材来源建议</label><input id="f-s" value="${esc(base.source)}">`,
     async () => {
-      const obj = { id: $("#f-id").value, title: $("#f-t").value, chapter: $("#f-c").value, desc: $("#f-d").value, source: $("#f-s").value };
+      const obj = {
+        ...base, id: $("#f-id").value, title: $("#f-t").value, chapter: $("#f-c").value,
+        kind: $("#f-kind").value, panel: $("#f-panel").value, desc: $("#f-d").value, source: $("#f-s").value,
+        x: { label: $("#f-xl").value, unit: $("#f-xu").value, range: $("#f-xr").value },
+        y: { label: $("#f-yl").value, unit: $("#f-yu").value, range: $("#f-yr").value },
+        series: $("#f-series").value.split("\n").map(s => s.trim()).filter(Boolean),
+        rows: $("#f-rows").value.split("\n").map(s => s.trim()).filter(Boolean),
+      };
       if (i === null) DATA.figures.push(obj); else DATA.figures[i] = obj;
       await api("/api/figures", { figures: DATA.figures });
       closeModal(); render();
