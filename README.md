@@ -55,7 +55,7 @@ python platform/server.py          # 通用方式
 
 | 键 | 作用 | 默认 |
 |---|---|---|
-| `lit_root` | PDF 文献库根目录（按论文项目建子目录） | `E:\wps 文件夹\研究生\文献` |
+| `lit_root` | PDF 文献库根目录（按论文项目建子目录） | `~/Documents/MyPapers` |
 | `zotero_exe` | Zotero 可执行文件路径（启动/挂载用） | `D:\zotero\zotero.exe` |
 
 **AI 功能（拆解/翻译）**需要 DeepSeek API key，从环境变量 `DEEPSEEK_API_KEY` 或 `~/.dsh/.credentials.yaml`（`DEEPSEEK_API_KEY: sk-...`）自动读取；翻译服务也可在 `translator/data/settings.json` 中配置。没有 key 时平台其余功能不受影响。

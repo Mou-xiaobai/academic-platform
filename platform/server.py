@@ -38,7 +38,7 @@ D_META = os.path.join(BASE, "data", "meta.json")
 D_ANALYSIS = os.path.join(ROOT, "01_拆解报告", "原文拆解.md")
 D_CH = os.path.join(ROOT, "05_成稿")
 D_EXPORT = os.path.join(ROOT, "06_导出")
-LIT_ROOT = CFG.get("lit_root") or r"E:\wps 文件夹\研究生\文献"
+LIT_ROOT = CFG.get("lit_root") or os.path.join(os.path.expanduser("~"), "Documents", "MyPapers")
 D_DLLOG = os.path.join(LIT_ROOT, "下载台账.md")
 
 CHAPTER_FILES = {
